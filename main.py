@@ -7,6 +7,7 @@ import time
 import mimetypes
 import os
 import glob
+import argparse
 
 mimetypes.init()
 
@@ -21,7 +22,11 @@ ALBUM_FORMAT = "https://imgur.com/a/{album_hash}/"
 
 PAGE_FORMAT = "https://imgur.com/a/{album_hash}/{album_hash}/all/page/{page_number}?scrolled"
 ## For use with string.format(keyword=param)
+
 def get_images_to_folder(link,folder):
+    '''
+    Get the image at "link" to the "folder"
+    '''
     _, filename = os.path.split(link)
     filename,_ = os.path.splitext(filename)
     files = glob.glob(os.path.join(folder,filename)+"*")
@@ -51,22 +56,29 @@ def get_images_from_url(url, folder):
         return True
     return False
 
-def main(album_hash, folder):
-    album_url = ALBUM_FORMAT.format(album_hash=album_hash)
-    count = 1
-    while get_images_from_url(album_url, folder):
-        album_url = PAGE_FORMAT.format(album_hash=album_hash,page_number=count)
-        count+=1
+def main():
+    parser = argparse.ArgumentParser(description='Download an alubm from Imgur to a local folder')
+
+    parser.add_argument('-a','--album',required=True,help="Album hash, found after the \"/a/\" part of the url, but before the next /",type=str)
+
+    parser.add_argument('-f',"--folder",required=True,help="The folder youwant to throw the album into, it should exist.",type=str)
+
+    parser.add_argument("-p",'--proxy',help="Turn on the proxy",action="store_true",dest="proxy",default=False)
+
+    namespace = parser.parse_args(sys.argv[1:])
+
+    if not namespace.proxy:
+        proxies = {}
+
+    if os.path.exists(namespace.folder) and os.path.isdir(namespace.folder):
+        album_url = ALBUM_FORMAT.format(album_hash=namespace.album)
+        count = 1
+        while get_images_from_url(album_url, namespace.folder):
+            album_url = PAGE_FORMAT.format(album_hash=album_hash,page_number=count)
+            count+=1
+    else:
+        print "Couldn't find folder %s " %(namespace.folder)
 
 
 if __name__ == '__main__':
-    args = sys.argv
-
-    if len(args) != 3:
-        # Print out the help message and exit:
-        print ("URL and Folder, for args.")
-        exit()
-    album_hash = args[1]
-    folder = args[2]
-    if os.path.exists(folder) and os.path.isdir(folder):
-        main(album_hash, folder)
+    main()
